@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="description" content="AVS – Anti-Vergessen-System: Skonto, Buchungssätze & Jahresabschluss">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AVS Buchführung">
+  <link rel="manifest" href="manifest.json">
+  <title>AVS – Skonto & Jahresabschluss</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="data/questions.js"></script>
+  <style>
+    /* ── DESIGN SYSTEM ─────────────────────────────────────────────────── */
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #161b27;
+      --bg-card: #1a2035;
+      --bg-card-hover: #1e2640;
+      --accent-gold: #f5c842;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --accent-purple: #a855f7;
+      --accent-orange: #f97316;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      --border: #1e2d45;
+      --border-active: #2a3f5f;
+      --font-main: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --transition: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── LAYOUT ─────────────────────────────────────────────────────────── */
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────────────── */
+    .header {
+      padding: 20px 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(to bottom, var(--bg-primary) 85%, transparent);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-gold), #e8a000);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f1117;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(245, 200, 66, 0.12);
+      border: 1px solid rgba(245, 200, 66, 0.25);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-gold);
+      cursor: pointer;
+      transition: all 0.2s var(--transition);
+    }
+
+    .streak-badge:hover {
+      background: rgba(245, 200, 66, 0.18);
+    }
+
+    /* ── NAVIGATION ─────────────────────────────────────────────────────── */
+    .nav {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 4px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-main);
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .nav-btn .nav-icon { font-size: 16px; }
+
+    .nav-btn.active {
+      background: var(--bg-card);
+      color: var(--accent-gold);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .nav-btn:hover:not(.active) {
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ── MAIN CONTENT ───────────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      padding: 16px 20px 100px;
+      overflow-y: auto;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── SECTION TITLE ──────────────────────────────────────────────────── */
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .section-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── HEUTE SCREEN ───────────────────────────────────────────────────── */
+    .day-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .day-label {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .day-counter {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--accent-gold);
+    }
+
+    /* Frage-Karte */
+    .question-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .question-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-orange));
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-category { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .tag-easy { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .tag-medium { background: rgba(245,200,66,0.15); color: var(--accent-gold); }
+    .tag-hard { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    .question-text {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+    }
+
+    /* Hint */
+    .hint-box {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .hint-box.visible { display: block; }
+
+    .hint-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .hint-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* Antwort */
+    .answer-box {
+      background: rgba(34,197,94,0.06);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .answer-box.visible { display: block; }
+
+    .answer-short {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4ade80;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .answer-long {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+      display: none;
+    }
+
+    .answer-long.visible { display: block; }
+
+    .toggle-detail {
+      font-size: 12px;
+      color: var(--accent-gold);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 4px 0;
+    }
+
+    /* Action Buttons */
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-hint {
+      background: rgba(59,130,246,0.12);
+      color: #60a5fa;
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+
+    .btn-hint:hover { background: rgba(59,130,246,0.2); }
+
+    .btn-show {
+      background: rgba(245,200,66,0.12);
+      color: var(--accent-gold);
+      border: 1px solid rgba(245,200,66,0.25);
+    }
+
+    .btn-show:hover { background: rgba(245,200,66,0.2); }
+
+    .btn-correct {
+      background: rgba(34,197,94,0.12);
+      color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+
+    .btn-correct:hover { background: rgba(34,197,94,0.2); }
+
+    .btn-wrong {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .btn-wrong:hover { background: rgba(239,68,68,0.2); }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-gold), #e8a000);
+      color: #0f1117;
+      font-weight: 700;
+      width: 100%;
+    }
+
+    .btn-next:hover { opacity: 0.9; }
+
+    .result-row {
+      display: none;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .result-row.visible { display: flex; }
+
+    /* Fortschritts-Mini */
+    .mini-progress {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mini-progress-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .mini-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-green));
+      border-radius: 3px;
+      transition: width 0.5s var(--transition);
+    }
+
+    .mini-progress-text {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Kategorie-Chips */
+    .category-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 16px;
+      scrollbar-width: none;
+    }
+
+    .category-chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      transition: all 0.2s var(--transition);
+    }
+
+    .chip.active, .chip:hover {
+      background: rgba(245,200,66,0.12);
+      border-color: rgba(245,200,66,0.3);
+      color: var(--accent-gold);
+    }
+
+    /* Karten-Liste */
+    .cards-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .card-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s var(--transition);
+      position: relative;
+    }
+
+    .card-item:hover {
+      border-color: var(--border-active);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+
+    .card-item.learned {
+      border-color: rgba(34,197,94,0.25);
+    }
+
+    .card-item.learned::after {
+      content: '✓';
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      color: #4ade80;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .card-topic {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      padding-right: 24px;
+    }
+
+    .card-preview {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-active);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s var(--transition);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+      flex: 1;
+      padding-right: 12px;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .modal-answer-short {
+      font-size: 15px;
+      font-weight: 600;
+      color: #4ade80;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: rgba(34,197,94,0.08);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+
+    .modal-answer-long {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    /* ── FORTSCHRITT SCREEN ─────────────────────────────────────────────── */
+    .progress-ring-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .progress-ring-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+
+    .progress-ring-svg {
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring-bg {
+      fill: none;
+      stroke: var(--bg-secondary);
+      stroke-width: 12;
+    }
+
+    .progress-ring-fill {
+      fill: none;
+      stroke: url(#goldGradient);
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s var(--transition);
+    }
+
+    .progress-ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-pct {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent-gold);
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .category-progress { display: flex; flex-direction: column; gap: 10px; }
+
+    .cat-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cat-name {
+      font-size: 13px;
+      font-weight: 500;
+      width: 140px;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+    }
+
+    .cat-bar {
+      flex: 1;
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .cat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s var(--transition);
+    }
+
+    .cat-pct {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      width: 36px;
+      text-align: right;
+    }
+
+    .btn-reset {
+      width: 100%;
+      padding: 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #f87171;
+      border-radius: var(--radius);
+      font-family: var(--font-main);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s var(--transition);
+    }
+
+    .btn-reset:hover { background: rgba(239,68,68,0.15); }
+
+    /* ── TIPPS SCREEN ───────────────────────────────────────────────────── */
+    .tip-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 10px;
+    }
+
+    .tip-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .tip-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .tip-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .tip-body {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .tip-body code {
+      font-family: var(--font-mono);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent-gold);
+      font-size: 12px;
+    }
+
+    /* Häufigkeitsbalken */
+    .freq-table { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+    .freq-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .freq-name { font-size: 12px; width: 120px; flex-shrink: 0; color: var(--text-secondary); }
+
+    .freq-bar {
+      flex: 1;
+      height: 10px;
+      background: var(--bg-secondary);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .freq-fill {
+      height: 100%;
+      border-radius: 5px;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-orange));
+    }
+
+    .freq-pct {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent-gold);
+      width: 36px;
+      text-align: right;
+    }
+
+    /* Install Banner */
+    .install-banner {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #1a2035, #1e2640);
+      border: 1px solid rgba(245,200,66,0.3);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 440px;
+      width: calc(100% - 40px);
+      z-index: 150;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideUp 0.4s var(--transition);
+      display: none;
+    }
+
+    .install-banner.show { display: flex; }
+
+    .install-text { flex: 1; font-size: 13px; color: var(--text-secondary); }
+    .install-text strong { color: var(--text-primary); }
+
+    .btn-install {
+      padding: 8px 16px;
+      background: var(--accent-gold);
+      color: #0f1117;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-dismiss {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: var(--bg-card);
+      border: 1px solid var(--border-active);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 300;
+      transition: transform 0.3s var(--transition);
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.correct { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+    .toast.wrong { border-color: rgba(239,68,68,0.4); color: #f87171; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Responsive */
+    @media (max-width: 360px) {
+      .section-title { font-size: 20px; }
+      .question-text { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">€</div>
+        <div>
+          <div class="logo-text">AVS Buchführung</div>
+          <div class="logo-sub">Skonto · Buchungssätze · Jahresabschluss</div>
+        </div>
+      </div>
+      <div class="streak-badge" onclick="showStreak()">
+        🔥 <span id="streakCount">0</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+      <button class="nav-btn active" onclick="showScreen('heute')" id="nav-heute">
+        <span class="nav-icon">⚡</span>Heute
+      </button>
+      <button class="nav-btn" onclick="showScreen('karten')" id="nav-karten">
+        <span class="nav-icon">📚</span>Karten
+      </button>
+      <button class="nav-btn" onclick="showScreen('fortschritt')" id="nav-fortschritt">
+        <span class="nav-icon">📊</span>Fortschritt
+      </button>
+      <button class="nav-btn" onclick="showScreen('tipps')" id="nav-tipps">
+        <span class="nav-icon">💡</span>Tipps
+      </button>
+    </nav>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ── HEUTE SCREEN ──────────────────────────────────────────────── -->
+    <div class="screen active" id="screen-heute">
+      <div class="day-info">
+        <div class="day-label" id="todayDate">Mittwoch, 21. Mai</div>
+        <div class="day-counter" id="questionCounter">Frage 1 / 50</div>
+      </div>
+
+      <!-- Frage-Karte -->
+      <div class="question-card" id="mainCard">
+        <div class="card-meta" id="cardMeta"></div>
+        <div class="question-text" id="questionText">Lade Frage...</div>
+
+        <!-- Hint -->
+        <div class="hint-box" id="hintBox">
+          <div class="hint-label">💡 Hinweis</div>
+          <div class="hint-text" id="hintText"></div>
+        </div>
+
+        <!-- Antwort -->
+        <div class="answer-box" id="answerBox">
+          <div class="answer-short" id="answerShort"></div>
+          <button class="toggle-detail" onclick="toggleDetail()">▼ Vollständige Erklärung anzeigen</button>
+          <div class="answer-long" id="answerLong"></div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="action-row" id="actionRow">
+          <button class="btn btn-hint" onclick="showHint()">💡 Hinweis</button>
+          <button class="btn btn-show" onclick="showAnswer()">👁 Antwort</button>
+        </div>
+
+        <div class="result-row" id="resultRow">
+          <button class="btn btn-correct" onclick="markResult(true)">✓ Gewusst</button>
+          <button class="btn btn-wrong" onclick="markResult(false)">✗ Nicht gewusst</button>
+        </div>
+
+        <button class="btn btn-next" onclick="nextQuestion()" id="btnNext" style="display:none">
+          → Nächste Frage
+        </button>
+      </div>
+
+      <!-- Mini-Fortschritt -->
+      <div class="mini-progress">
+        <div class="mini-progress-bar">
+          <div class="mini-progress-fill" id="miniProgressFill" style="width:0%"></div>
+        </div>
+        <div class="mini-progress-text" id="miniProgressText">0 / 50</div>
+      </div>
+    </div>
+
+    <!-- ── KARTEN SCREEN ─────────────────────────────────────────────── -->
+    <div class="screen" id="screen-karten">
+      <div class="section-title">Alle Karten</div>
+      <div class="section-sub">50 Lernkarten · 6 Kategorien</div>
+
+      <div class="category-chips" id="categoryChips"></div>
+      <div class="cards-list" id="cardsList"></div>
+    </div>
+
+    <!-- ── FORTSCHRITT SCREEN ────────────────────────────────────────── -->
+    <div class="screen" id="screen-fortschritt">
+      <div class="section-title">Dein Fortschritt</div>
+      <div class="section-sub">Heute · Diese Woche · Gesamt</div>
+
+      <div class="progress-ring-container">
+        <div class="progress-ring-wrap">
+          <svg class="progress-ring-svg" width="160" height="160" viewBox="0 0 160 160">
+            <defs>
+              <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#f5c842"/>
+                <stop offset="100%" style="stop-color:#22c55e"/>
+              </linearGradient>
+            </defs>
+            <circle class="progress-ring-bg" cx="80" cy="80" r="68"/>
+            <circle class="progress-ring-fill" id="progressRing" cx="80" cy="80" r="68"
+              stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
+          </svg>
+          <div class="progress-ring-text">
+            <div class="progress-pct" id="progressPct">0%</div>
+            <div class="progress-label">gelernt</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statCorrect" style="color:#4ade80">0</div>
+          <div class="stat-label">Gewusst</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statWrong" style="color:#f87171">0</div>
+          <div class="stat-label">Nicht gewusst</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statStreak" style="color:#f5c842">0</div>
+          <div class="stat-label">🔥 Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">50</div>
+          <div class="stat-label">Karten gesamt</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="font-size:16px; margin-bottom:12px">Nach Kategorie</div>
+      <div class="category-progress" id="categoryProgress"></div>
+
+      <button class="btn-reset" onclick="resetProgress()">🗑 Fortschritt zurücksetzen</button>
+    </div>
+
+    <!-- ── TIPPS SCREEN ──────────────────────────────────────────────── -->
+    <div class="screen" id="screen-tipps">
+      <div class="section-title">Lerntipps & Methoden</div>
+      <div class="section-sub">AVS-Workflow · Wissenschaftliche Grundlagen</div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(245,200,66,0.12)">🧠</div>
+          <div class="tip-title">Spaced Repetition</div>
+        </div>
+        <div class="tip-body">
+          Wiederhole Karten in wachsenden Abständen: <code>1 → 3 → 7 → 14 → 30 Tage</code>. Karten die du nicht weißt, kommen früher zurück. Das ist die wissenschaftlich effektivste Methode gegen das Vergessen.
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(59,130,246,0.12)">✍️</div>
+          <div class="tip-title">Active Recall</div>
+        </div>
+        <div class="tip-body">
+          Decke die Antwort ab und versuche sie selbst zu formulieren. Erst dann aufdecken. Das Abrufen aus dem Gedächtnis ist 3× effektiver als nochmals lesen.
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(34,197,94,0.12)">📐</div>
+          <div class="tip-title">Buchungssatz-Formel</div>
+        </div>
+        <div class="tip-body">
+          Merke: <code>Soll an Haben</code>. Bei Skonto-Buchungen immer prüfen:<br>
+          1. Wer zahlt? (Käufer oder Verkäufer)<br>
+          2. Skonto auf Nettobetrag berechnen<br>
+          3. MwSt.-Korrektur: <code>Skonto × 19%</code><br>
+          4. Zahlbetrag = Brutto − Skonto − MwSt.-Korrektur
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(168,85,247,0.12)">🔄</div>
+          <div class="tip-title">ARAP vs. PRAP Merkhilfe</div>
+        </div>
+        <div class="tip-body">
+          <code>ARAP</code> = Aktiv = Ausgabe jetzt, Aufwand später<br>
+          <code>PRAP</code> = Passiv = Einnahme jetzt, Ertrag später<br><br>
+          Eselsbrücke: <strong>A</strong>RAP = <strong>A</strong>usgabe, <strong>P</strong>RAP = <strong>P</strong>assiv/Einnahme
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(249,115,22,0.12)">📊</div>
+          <div class="tip-title">Prüfungshäufigkeit Buchführung</div>
+        </div>
+        <div class="tip-body">
+          <div class="freq-table">
+            <div class="freq-row">
+              <div class="freq-name">Skonto/Zahlungsverkehr</div>
+              <div class="freq-bar"><div class="freq-fill" style="width:95%"></div></div>
+              <div class="freq-pct">95%</div>
+            </div>
+            <div class="freq-row">
+              <div class="freq-name">Buchungssätze</div>
+              <div class="freq-bar"><div class="freq-fill" style="width:100%"></div></div>
+              <div class="freq-pct">100%</div>
+            </div>
+            <div class="freq-row">
+              <div class="freq-name">Jahresabschluss</div>
+              <div class="freq-bar"><div class="freq-fill" style="width:90%"></div></div>
+              <div class="freq-pct">90%</div>
+            </div>
+            <div class="freq-row">
+              <div class="freq-name">ARAP/PRAP</div>
+              <div class="freq-bar"><div class="freq-fill" style="width:85%"></div></div>
+              <div class="freq-pct">85%</div>
+            </div>
+            <div class="freq-row">
+              <div class="freq-name">Rückstellungen</div>
+              <div class="freq-bar"><div class="freq-fill" style="width:80%"></div></div>
+              <div class="freq-pct">80%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(245,200,66,0.12)">⚡</div>
+          <div class="tip-title">AVS Tagesroutine</div>
+        </div>
+        <div class="tip-body">
+          <strong>Morgens (5 Min.):</strong> 3 Karten des Tages durcharbeiten<br>
+          <strong>Mittags (2 Min.):</strong> Gestrige Karten kurz wiederholen<br>
+          <strong>Abends (5 Min.):</strong> Neue Notizen in Obsidian eintragen<br>
+          <strong>Freitag (15 Min.):</strong> Wochenrückblick + Lücken identifizieren
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-header">
+          <div class="tip-icon" style="background:rgba(59,130,246,0.12)">🎯</div>
+          <div class="tip-title">Skonto-Jahreszins Formel</div>
+        </div>
+        <div class="tip-body">
+          <code>i = (s / (100−s)) × (360 / (n−t))</code><br><br>
+          s = Skontosatz, n = Nettotage, t = Skontotage<br><br>
+          Beispiel: 2% Skonto, 30 Tage netto, 10 Tage Skonto:<br>
+          <code>i = (2/98) × (360/20) = 36,7% p.a.</code>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="closeModalDirect()">×</button>
+    </div>
+    <div class="card-meta" id="modalMeta"></div>
+    <div style="margin-bottom:12px; font-size:13px; color:var(--text-muted)" id="modalQuestion"></div>
+    <div class="modal-answer-short" id="modalAnswerShort"></div>
+    <div class="modal-answer-long" id="modalAnswerLong"></div>
+    <div class="modal-actions">
+      <button class="btn btn-correct" style="flex:1" onclick="modalMark(true)">✓ Gewusst</button>
+      <button class="btn btn-wrong" style="flex:1" onclick="modalMark(false)">✗ Nicht gewusst</button>
+    </div>
+  </div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div class="install-banner" id="installBanner">
+  <div>📱</div>
+  <div class="install-text"><strong>App installieren</strong><br>Zum Homescreen hinzufügen für Offline-Zugriff</div>
+  <button class="btn-install" onclick="installApp()">Installieren</button>
+  <button class="btn-dismiss" onclick="dismissInstall()">×</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+const state = {
+  currentQ: null,
+  currentIdx: 0,
+  answered: false,
+  learned: new Set(JSON.parse(localStorage.getItem('avs_skonto_learned') || '[]')),
+  wrong: new Set(JSON.parse(localStorage.getItem('avs_skonto_wrong') || '[]')),
+  streak: parseInt(localStorage.getItem('avs_skonto_streak') || '0'),
+  lastDate: localStorage.getItem('avs_skonto_lastdate') || '',
+  filterCat: 'Alle',
+  modalQId: null,
+  deferredPrompt: null
+};
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  checkStreak();
+  loadTodayQuestion();
+  renderCategoryChips();
+  renderCards();
+  updateProgress();
+  updateStreakBadge();
+  setTodayDate();
+  registerSW();
+});
+
+function setTodayDate() {
+  const d = new Date();
+  const days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  document.getElementById('todayDate').textContent = `${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}`;
+}
+
+function checkStreak() {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (state.lastDate === today) return;
+  if (state.lastDate === yesterday) {
+    // Streak continues
+  } else if (state.lastDate !== '') {
+    state.streak = 0;
+  }
+}
+
+// ── SCREENS ────────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'fortschritt') updateProgress();
+  if (name === 'karten') renderCards();
+}
+
+// ── HEUTE ──────────────────────────────────────────────────────────────────
+function loadTodayQuestion() {
+  const dayIdx = Math.floor(Date.now() / 86400000) % AVS_QUESTIONS.length;
+  state.currentIdx = dayIdx;
+  state.currentQ = AVS_QUESTIONS[dayIdx];
+  state.answered = false;
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = state.currentQ;
+  if (!q) return;
+
+  // Meta tags
+  const diffClass = q.difficulty === 'leicht' ? 'tag-easy' : q.difficulty === 'mittel' ? 'tag-medium' : 'tag-hard';
+  const diffLabel = q.difficulty === 'leicht' ? '⬤ Leicht' : q.difficulty === 'mittel' ? '⬤ Mittel' : '⬤ Schwer';
+  document.getElementById('cardMeta').innerHTML = `
+    <span class="tag tag-category">${q.category}</span>
+    <span class="tag ${diffClass}">${diffLabel}</span>
+  `;
+
+  document.getElementById('questionText').textContent = q.question;
+  document.getElementById('hintText').textContent = q.hint;
+  document.getElementById('answerShort').textContent = q.shortAnswer;
+  document.getElementById('answerLong').textContent = q.longAnswer;
+  document.getElementById('questionCounter').textContent = `Frage ${q.id} / ${AVS_QUESTIONS.length}`;
+
+  // Reset state
+  document.getElementById('hintBox').classList.remove('visible');
+  document.getElementById('answerBox').classList.remove('visible');
+  document.getElementById('answerLong').classList.remove('visible');
+  document.getElementById('actionRow').style.display = 'flex';
+  document.getElementById('resultRow').classList.remove('visible');
+  document.getElementById('btnNext').style.display = 'none';
+  state.answered = false;
+}
+
+function showHint() {
+  document.getElementById('hintBox').classList.add('visible');
+}
+
+function showAnswer() {
+  document.getElementById('answerBox').classList.add('visible');
+  document.getElementById('actionRow').style.display = 'none';
+  document.getElementById('resultRow').classList.add('visible');
+}
+
+function toggleDetail() {
+  const el = document.getElementById('answerLong');
+  const btn = document.querySelector('.toggle-detail');
+  if (el.classList.contains('visible')) {
+    el.classList.remove('visible');
+    btn.textContent = '▼ Vollständige Erklärung anzeigen';
+  } else {
+    el.classList.add('visible');
+    btn.textContent = '▲ Erklärung ausblenden';
+  }
+}
+
+function markResult(correct) {
+  const q = state.currentQ;
+  if (correct) {
+    state.learned.add(q.id);
+    state.wrong.delete(q.id);
+    state.streak++;
+    state.lastDate = new Date().toDateString();
+    showToast('✓ Sehr gut! Weiter so!', 'correct');
+  } else {
+    state.wrong.add(q.id);
+    state.learned.delete(q.id);
+    state.streak = 0;
+    showToast('✗ Nochmal üben – du schaffst das!', 'wrong');
+  }
+  saveState();
+  updateStreakBadge();
+  updateMiniProgress();
+  document.getElementById('resultRow').classList.remove('visible');
+  document.getElementById('btnNext').style.display = 'block';
+}
+
+function nextQuestion() {
+  // Nächste unbekannte Frage oder zufällig
+  const unknown = AVS_QUESTIONS.filter(q => !state.learned.has(q.id));
+  if (unknown.length > 0) {
+    state.currentQ = unknown[Math.floor(Math.random() * unknown.length)];
+  } else {
+    // Alle gelernt – zufällige Wiederholung
+    state.currentQ = AVS_QUESTIONS[Math.floor(Math.random() * AVS_QUESTIONS.length)];
+  }
+  renderQuestion();
+}
+
+function updateMiniProgress() {
+  const pct = Math.round((state.learned.size / AVS_QUESTIONS.length) * 100);
+  document.getElementById('miniProgressFill').style.width = pct + '%';
+  document.getElementById('miniProgressText').textContent = `${state.learned.size} / ${AVS_QUESTIONS.length}`;
+}
+
+// ── KARTEN ─────────────────────────────────────────────────────────────────
+function renderCategoryChips() {
+  const cats = ['Alle', ...new Set(AVS_QUESTIONS.map(q => q.category))];
+  const container = document.getElementById('categoryChips');
+  container.innerHTML = cats.map(c => `
+    <div class="chip ${c === 'Alle' ? 'active' : ''}" onclick="filterCategory('${c}', this)">${c}</div>
+  `).join('');
+}
+
+function filterCategory(cat, el) {
+  state.filterCat = cat;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderCards();
+}
+
+function renderCards() {
+  const filtered = state.filterCat === 'Alle'
+    ? AVS_QUESTIONS
+    : AVS_QUESTIONS.filter(q => q.category === state.filterCat);
+
+  const container = document.getElementById('cardsList');
+  container.innerHTML = filtered.map(q => {
+    const isLearned = state.learned.has(q.id);
+    const diffClass = q.difficulty === 'leicht' ? 'tag-easy' : q.difficulty === 'mittel' ? 'tag-medium' : 'tag-hard';
+    const diffLabel = q.difficulty === 'leicht' ? 'Leicht' : q.difficulty === 'mittel' ? 'Mittel' : 'Schwer';
+    return `
+      <div class="card-item ${isLearned ? 'learned' : ''}" onclick="openModal(${q.id})">
+        <div class="card-topic">${q.topic}</div>
+        <div class="card-preview">${q.question}</div>
+        <div class="card-tags">
+          <span class="tag tag-category" style="font-size:9px">${q.category}</span>
+          <span class="tag ${diffClass}" style="font-size:9px">${diffLabel}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const q = AVS_QUESTIONS.find(x => x.id === id);
+  if (!q) return;
+  state.modalQId = id;
+
+  const diffClass = q.difficulty === 'leicht' ? 'tag-easy' : q.difficulty === 'mittel' ? 'tag-medium' : 'tag-hard';
+  const diffLabel = q.difficulty === 'leicht' ? 'Leicht' : q.difficulty === 'mittel' ? 'Mittel' : 'Schwer';
+
+  document.getElementById('modalTitle').textContent = q.topic;
+  document.getElementById('modalMeta').innerHTML = `
+    <span class="tag tag-category">${q.category}</span>
+    <span class="tag ${diffClass}">${diffLabel}</span>
+  `;
+  document.getElementById('modalQuestion').textContent = q.question;
+  document.getElementById('modalAnswerShort').textContent = q.shortAnswer;
+  document.getElementById('modalAnswerLong').textContent = q.longAnswer;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function modalMark(correct) {
+  markModalResult(state.modalQId, correct);
+  closeModalDirect();
+  renderCards();
+}
+
+function markModalResult(id, correct) {
+  if (correct) {
+    state.learned.add(id);
+    state.wrong.delete(id);
+    showToast('✓ Als gelernt markiert!', 'correct');
+  } else {
+    state.wrong.add(id);
+    state.learned.delete(id);
+    showToast('✗ Zum Wiederholen vorgemerkt', 'wrong');
+  }
+  saveState();
+  updateMiniProgress();
+}
+
+// ── FORTSCHRITT ────────────────────────────────────────────────────────────
+function updateProgress() {
+  const total = AVS_QUESTIONS.length;
+  const learned = state.learned.size;
+  const wrong = state.wrong.size;
+  const pct = Math.round((learned / total) * 100);
+
+  // Ring
+  const circumference = 427.26;
+  const offset = circumference - (pct / 100) * circumference;
+  document.getElementById('progressRing').style.strokeDashoffset = offset;
+  document.getElementById('progressPct').textContent = pct + '%';
+
+  // Stats
+  document.getElementById('statCorrect').textContent = learned;
+  document.getElementById('statWrong').textContent = wrong;
+  document.getElementById('statStreak').textContent = state.streak;
+
+  // Kategorie
+  const cats = [...new Set(AVS_QUESTIONS.map(q => q.category))];
+  const colors = ['#f5c842','#22c55e','#3b82f6','#a855f7','#f97316','#ef4444'];
+  const container = document.getElementById('categoryProgress');
+  container.innerHTML = cats.map((cat, i) => {
+    const catQs = AVS_QUESTIONS.filter(q => q.category === cat);
+    const catLearned = catQs.filter(q => state.learned.has(q.id)).length;
+    const catPct = Math.round((catLearned / catQs.length) * 100);
+    return `
+      <div class="cat-row">
+        <div class="cat-name">${cat}</div>
+        <div class="cat-bar">
+          <div class="cat-fill" style="width:${catPct}%; background:${colors[i % colors.length]}"></div>
+        </div>
+        <div class="cat-pct">${catPct}%</div>
+      </div>
+    `;
+  }).join('');
+
+  updateMiniProgress();
+}
+
+function resetProgress() {
+  if (!confirm('Fortschritt wirklich zurücksetzen?')) return;
+  state.learned.clear();
+  state.wrong.clear();
+  state.streak = 0;
+  saveState();
+  updateProgress();
+  updateStreakBadge();
+  renderCards();
+  showToast('Fortschritt zurückgesetzt', '');
+}
+
+// ── STREAK ─────────────────────────────────────────────────────────────────
+function updateStreakBadge() {
+  document.getElementById('streakCount').textContent = state.streak;
+}
+
+function showStreak() {
+  showToast(`🔥 ${state.streak} Tage Streak!`, '');
+}
+
+// ── SAVE/LOAD ──────────────────────────────────────────────────────────────
+function saveState() {
+  localStorage.setItem('avs_skonto_learned', JSON.stringify([...state.learned]));
+  localStorage.setItem('avs_skonto_wrong', JSON.stringify([...state.wrong]));
+  localStorage.setItem('avs_skonto_streak', state.streak);
+  localStorage.setItem('avs_skonto_lastdate', state.lastDate);
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── PWA ────────────────────────────────────────────────────────────────────
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  state.deferredPrompt = e;
+  if (!localStorage.getItem('avs_skonto_installed')) {
+    setTimeout(() => document.getElementById('installBanner').classList.add('show'), 3000);
+  }
+});
+
+function installApp() {
+  if (state.deferredPrompt) {
+    state.deferredPrompt.prompt();
+    state.deferredPrompt.userChoice.then(() => {
+      localStorage.setItem('avs_skonto_installed', '1');
+      dismissInstall();
+    });
+  }
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').classList.remove('show');
+}
+</script>
+</body>
+</html>
